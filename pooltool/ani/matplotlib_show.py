@@ -5,10 +5,12 @@ import matplotlib.patches as patches
 import matplotlib.transforms as transforms
 from matplotlib import pyplot as plt
 
+from pooltool.evolution import continuize
 from pooltool.objects.table.specs import TableType
 from pooltool.system.datatypes import MultiSystem, System
 
 
+# TODO: Add strong typing
 class MatPlotLibShow:
     def __init__(self):
         self.top_thickness = 0.1  # 10cm
@@ -19,7 +21,7 @@ class MatPlotLibShow:
         self.color_top = "#5e400b"
         self.color_pocket = "#000000"
         self.color_path = [  # Path colours for different ball states
-            "black",  # stationary = 0
+            "white",  # stationary = 0
             "blue",  # spinning = 1
             "#b3b3b3",  # sliding = 2
             "white",  # rolling = 3
@@ -43,7 +45,9 @@ class MatPlotLibShow:
         self.init_plot(ax, shot_or_shots.table)
         self.draw_table(ax, shot_or_shots.table)
 
-        self.draw_ball(ax, shot_or_shots.balls["cue"])
+        continuize(shot_or_shots, 0.001, inplace=True)
+        self.draw_ball_paths(ax, shot_or_shots)
+        self.draw_balls(ax, shot_or_shots.balls)
 
         plt.show()
 
@@ -223,16 +227,67 @@ class MatPlotLibShow:
         draw_table_top(ax, table)
         draw_pockets(ax, table)
 
-    def draw_ball(self, ax, ball, time=0):
-        """Draws a ball on the table.
+    def draw_ball_paths(self, ax, shot):
+        """Draws the ball paths onto the provided Matplotlib Axes."""
 
-        The ball is drawn as a circle with a path indicating its trajectory.
-        """
+        for ball_id, ball_info in shot.balls.items():
+            self.draw_ball_path(ax, ball_info)
+
+    def draw_ball_path(self, ax, ball_info):
+        def draw_ball_path_segment(_ax, _ball_info, _current_state, _points):
+            # Determine color based on the state.
+            if _current_state == 3:  # Rolling state
+                # Try to get the ball’s colour from self.color_ball for its ballset,
+                # otherwise default to gray.
+                if _ball_info.id in []:  # self.color_ball:
+                    # For a lighter effect, you might adjust the colour; here we simply use it.
+                    color = self.color_ball[_ball_info.id]
+                else:
+                    color = self.color_path[3]
+            else:
+                color = self.color_path[_current_state]
+            # Plot the path segment if there are at least two points.
+            if len(_points) > 1:
+                xs, ys = zip(*_points)
+                _ax.plot(xs, ys, color=color, linewidth=2, zorder=5)
+
+        points = []
+        # Start with the state of the first point.
+        current_state = ball_info.history_cts.states[0].s
+
+        for i, state in enumerate(ball_info.history_cts.states):
+            # Check if the state changes or if we are at the last state.
+            if state.s != current_state:
+                draw_ball_path_segment(ax, ball_info, current_state, points)
+
+                # Prepare for the next segment: start with the current state’s point.
+                points = [points[-1]]
+                current_state = state.s  # update current state for subsequent segments
+
+            # Extract (row, col) and swap to (x, y)
+            # Using float conversion for matplotlib
+            x, y = float(state.rvw[0][1]), float(state.rvw[0][0])
+            points.append((x, y))
+
+            # If this is the last state, draw the final segment.
+            if i == len(ball_info.history_cts.states) - 1:
+                draw_ball_path_segment(
+                    ax, ball_info, ball_info.history_cts.states[-1].s, points
+                )
+
+    def draw_balls(self, ax, balls):
+        """Draws all balls on the table."""
+
+        for ball in balls.values():
+            self.draw_ball(ax, ball)
+
+    def draw_ball(self, ax, ball, time=0):
+        """Draws a ball on the table."""
 
         assert time >= 0, "Time must be non-negative."
 
         # Draw the ball
-        for state in ball.history.states:
+        for state in ball.history_cts.states:
             if state.t > time:
                 break
 
@@ -243,5 +298,6 @@ class MatPlotLibShow:
             ball.params.R,
             facecolor="white",
             edgecolor="black",
+            zorder=10,
         )
         ax.add_patch(ball_patch)
