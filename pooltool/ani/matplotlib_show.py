@@ -91,6 +91,9 @@ class MatPlotLibShow:
                 # Compute the vector and its length.
                 dx, dy = x2 - x1, y2 - y1
                 length = math.hypot(dx, dy)
+                if not table.has_pockets:
+                    # Adjust the length for the cushion thickness.
+                    length += 2 * self.cushion_thickness
 
                 # Calculate the base angle from the x-axis (in degrees).
                 base_angle = math.degrees(math.atan2(dy, dx))
