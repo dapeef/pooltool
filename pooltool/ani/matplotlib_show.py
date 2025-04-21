@@ -40,7 +40,6 @@ class MatPlotLibShow:
         # else:
         #     for shot in shot_or_shots:
         #         multisystem.append(shot)
-
         fig, ax = plt.subplots()
 
         self.init_dimensions(shot_or_shots.table)
@@ -76,107 +75,120 @@ class MatPlotLibShow:
         and table.l (length) extends along the x‑axis.
         """
 
-        # --- Draw linear cushion segments ---
-        for line_info in table.cushion_segments.linear.values():
-            # Convert the two endpoints from (row, col) to (x, y)
-            x1, y1 = float(line_info.p1[1]), float(line_info.p1[0])
-            x2, y2 = float(line_info.p2[1]), float(line_info.p2[0])
+        def draw_cushions(ax, table):
+            """Draws the cushions on the table."""
 
-            # Compute the vector and its length.
-            dx, dy = x2 - x1, y2 - y1
-            length = math.hypot(dx, dy)
+            # --- Draw linear cushion segments ---
+            for line_info in table.cushion_segments.linear.values():
+                # Convert the two endpoints from (row, col) to (x, y)
+                x1, y1 = float(line_info.p1[1]), float(line_info.p1[0])
+                x2, y2 = float(line_info.p2[1]), float(line_info.p2[0])
 
-            # Calculate the base angle from the x-axis (in degrees).
-            base_angle = math.degrees(math.atan2(dy, dx))
+                # Compute the vector and its length.
+                dx, dy = x2 - x1, y2 - y1
+                length = math.hypot(dx, dy)
 
-            # Adjust the angle using the cushion polarity (assumed to be a list
-            # where the id (converted to int) indexes into self.cushion_polarity).
-            angle = base_angle + self.cushion_polarity[int(line_info.id) - 1] * 180
+                # Calculate the base angle from the x-axis (in degrees).
+                base_angle = math.degrees(math.atan2(dy, dx))
 
-            # Find the midpoint of the cushion
-            mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+                # Adjust the angle using the cushion polarity (assumed to be a list
+                # where the id (converted to int) indexes into self.cushion_polarity).
+                angle = base_angle + self.cushion_polarity[int(line_info.id) - 1] * 180
 
-            # Create a rectangle whose bottom edge (of thickness) is along the cushion.
-            # Starting from relative coordinates (-length/2, 0) with width=length and height=cushion_thickness.
-            rect = patches.Rectangle(
-                (-length / 2, 0),
-                length,
-                self.cushion_thickness,
-                facecolor=self.color_cushion,
-                edgecolor=self.color_cushion,
+                # Find the midpoint of the cushion
+                mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+
+                # Create a rectangle whose bottom edge (of thickness) is along the cushion.
+                # Starting from relative coordinates (-length/2, 0) with width=length and height=cushion_thickness.
+                rect = patches.Rectangle(
+                    (-length / 2, 0),
+                    length,
+                    self.cushion_thickness,
+                    facecolor=self.color_cushion,
+                    edgecolor=self.color_cushion,
+                )
+
+                # Create an affine transform to rotate about (0,0) then translate to the midpoint.
+                trans = transforms.Affine2D().rotate_deg(angle).translate(mid_x, mid_y)
+                rect.set_transform(trans + ax.transData)
+                ax.add_patch(rect)
+
+            # --- Draw circular cushion segments ---
+            for circ_info in table.cushion_segments.circular.values():
+                # Convert center from (row, col) to (x, y)
+                cx, cy = float(circ_info.center[1]), float(circ_info.center[0])
+                circle = patches.Circle(
+                    (cx, cy),
+                    circ_info.radius,
+                    facecolor=self.color_cushion,
+                    edgecolor=self.color_cushion,
+                )
+                ax.add_patch(circle)
+
+        def draw_table_top(ax, table):
+            """Draws the wooden top (table perimeter) on the table."""
+
+            # --- Draw the wooden top (table perimeter) ---
+            # Playing area is from (0, 0) to (table.l, table.w).
+
+            def draw_top_rectangle(_ax, lower_left, width, height):
+                """Helper function to draw a rectangle."""
+                _rect = patches.Rectangle(
+                    lower_left,
+                    width,
+                    height,
+                    facecolor=self.color_top,
+                    edgecolor=self.color_top,
+                )
+                _ax.add_patch(_rect)
+
+            # Top board: drawn on the top of the playing area.
+            draw_top_rectangle(
+                ax,
+                (self.view_min[0], self.view_max[1] - self.top_thickness),
+                self.view_max[0] + self.padding,
+                self.top_thickness,
             )
 
-            # Create an affine transform to rotate about (0,0) then translate to the midpoint.
-            trans = transforms.Affine2D().rotate_deg(angle).translate(mid_x, mid_y)
-            rect.set_transform(trans + ax.transData)
-            ax.add_patch(rect)
-
-        # --- Draw circular cushion segments ---
-        for circ_info in table.cushion_segments.circular.values():
-            # Convert center from (row, col) to (x, y)
-            cx, cy = float(circ_info.center[1]), float(circ_info.center[0])
-            circle = patches.Circle(
-                (cx, cy),
-                circ_info.radius,
-                facecolor=self.color_cushion,
-                edgecolor=self.color_cushion,
+            # Left board: drawn to the left of the playing area (negative x).
+            draw_top_rectangle(
+                ax,
+                (self.view_min[0], self.view_min[1]),
+                self.top_thickness,
+                self.view_max[1] + self.padding,
             )
-            ax.add_patch(circle)
 
-        # --- Draw the wooden top (table perimeter) ---
-        # Playing area is from (0, 0) to (table.l, table.w).
-
-        def draw_top_rectangle(_ax, lower_left, width, height):
-            """Helper function to draw a rectangle."""
-            _rect = patches.Rectangle(
-                lower_left,
-                width,
-                height,
-                facecolor=self.color_top,
-                edgecolor=self.color_top,
+            # Right board: drawn to the right of the playing area.
+            draw_top_rectangle(
+                ax,
+                (self.view_max[0] - self.top_thickness, self.view_min[1]),
+                self.top_thickness,
+                self.view_max[1] + self.padding,
             )
-            _ax.add_patch(_rect)
 
-        # Top board: drawn on the top of the playing area.
-        draw_top_rectangle(
-            ax,
-            (self.view_min[0], self.view_max[1] - self.top_thickness),
-            self.view_max[0] + self.padding,
-            self.top_thickness,
-        )
-
-        # Left board: drawn to the left of the playing area (negative x).
-        draw_top_rectangle(
-            ax,
-            (self.view_min[0], self.view_min[1]),
-            self.top_thickness,
-            self.view_max[1] + self.padding,
-        )
-
-        # Right board: drawn to the right of the playing area.
-        draw_top_rectangle(
-            ax,
-            (self.view_max[0] - self.top_thickness, self.view_min[1]),
-            self.top_thickness,
-            self.view_max[1] + self.padding,
-        )
-
-        # Bottom board: drawn below the playing area (negative y).
-        draw_top_rectangle(
-            ax,
-            (self.view_min[0], self.view_min[1]),
-            self.view_max[0] + self.padding,
-            self.top_thickness,
-        )
-
-        # --- Draw pockets ---
-        # For each pocket, convert the center coordinate and add a circle
-        for pocket in table.pockets.values():
-            px, py = float(pocket.center[1]), float(pocket.center[0])
-            pocket_patch = patches.Circle(
-                (px, py),
-                pocket.radius,
-                facecolor=self.color_pocket,
-                edgecolor=self.color_pocket,
+            # Bottom board: drawn below the playing area (negative y).
+            draw_top_rectangle(
+                ax,
+                (self.view_min[0], self.view_min[1]),
+                self.view_max[0] + self.padding,
+                self.top_thickness,
             )
-            ax.add_patch(pocket_patch)
+
+        def draw_pockets(ax, table):
+            """Draws the pockets on the table."""
+
+            # --- Draw pockets ---
+            # For each pocket, convert the center coordinate and add a circle
+            for pocket in table.pockets.values():
+                px, py = float(pocket.center[1]), float(pocket.center[0])
+                pocket_patch = patches.Circle(
+                    (px, py),
+                    pocket.radius,
+                    facecolor=self.color_pocket,
+                    edgecolor=self.color_pocket,
+                )
+                ax.add_patch(pocket_patch)
+
+        draw_cushions(ax, table)
+        draw_table_top(ax, table)
+        draw_pockets(ax, table)
