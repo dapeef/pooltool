@@ -41,7 +41,7 @@ import pooltool.utils as utils
 from pooltool.events import EventType
 from pooltool.evolution import continuize, simulate
 from pooltool.game.datatypes import GameType
-from pooltool.interact import Game, show
+from pooltool.interact import Game, show, show_matplotlib
 from pooltool.layouts import generate_layout, get_rack
 from pooltool.objects import (
     Ball,
@@ -85,6 +85,7 @@ __all__ = [
     "TableType",
     "Game",
     "show",
+    "show_matplotlib",
     "EventType",
     # functions
     "get_rack",

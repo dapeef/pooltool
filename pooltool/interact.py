@@ -3,6 +3,7 @@
 from typing import Optional
 
 from pooltool.ani.animate import Game, ShotViewer
+from pooltool.ani.matplotlib_show import MatPlotLibShow
 
 _shot_viewer: Optional[ShotViewer] = None
 
@@ -55,7 +56,26 @@ def show(*args, **kwargs):
     _shot_viewer.show(*args, **kwargs)
 
 
+def show_matplotlib(*args, **kwargs):
+    """Opens a matplotlib plot to display one or more shots in 2D.
+
+    Args:
+        shot_or_shots:
+            The shot or collection of shots to visualize. This can be a single
+            :class:`pooltool.system.datatypes.System` object or a
+            :class:`pooltool.system.datatypes.MultiSystem` object containing
+            multiple systems.
+
+            Note:
+                If a multisystem is passed, all the systems will be shown on
+                top of one another.
+    """
+
+    MatPlotLibShow().show(*args, **kwargs)
+
+
 __all__ = [
     "Game",
     "show",
+    "show_matplotlib",
 ]
