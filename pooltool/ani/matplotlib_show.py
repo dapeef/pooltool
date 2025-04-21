@@ -11,7 +11,7 @@ from pooltool.system.datatypes import MultiSystem, System
 
 class MatPlotLibShow:
     def __init__(self):
-        self.top_thickness = 0.15
+        self.top_thickness = 0.1  # 10cm
 
         # Set some colour values
         self.color_table = "#1ea625"
@@ -36,6 +36,7 @@ class MatPlotLibShow:
         # else:
         #     for shot in shot_or_shots:
         #         multisystem.append(shot)
+
         fig, ax = plt.subplots()
 
         self.init_dimensions(shot_or_shots.table)
@@ -67,10 +68,11 @@ class MatPlotLibShow:
         self.view_max = [table.l + self.padding, table.w + self.padding]
 
     def init_plot(self, ax, table):
-        # ax.set_axis_off()
+        ax.set_axis_off()
         ax.set_xlim(self.view_min[0], self.view_max[0])
         ax.set_ylim(self.view_min[1], self.view_max[1])
         ax.set_aspect("equal")
+        ax.figure.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
     def draw_table(self, ax, table):
         """Draws the pool table—including cushions (linear and circular), pockets and the wooden top (table perimeter) on a matplotlib axes.
@@ -78,6 +80,19 @@ class MatPlotLibShow:
         The playing area is defined such that (0, 0) is its lower-left corner,
         and table.l (length) extends along the x‑axis.
         """
+
+        def draw_table_background(ax):
+            """Draws the background of the table."""
+
+            # --- Draw the table background ---
+            rect_bg = patches.Rectangle(
+                (self.view_min[0], self.view_min[1]),
+                self.view_max[0] - self.view_min[0],
+                self.view_max[1] - self.view_min[1],
+                facecolor=self.color_table,
+                edgecolor=self.color_table,
+            )
+            ax.add_patch(rect_bg)
 
         def draw_cushions(ax, table):
             """Draws the cushions on the table."""
@@ -201,6 +216,7 @@ class MatPlotLibShow:
                 )
                 ax.add_patch(pocket_patch)
 
+        draw_table_background(ax)
         draw_cushions(ax, table)
         draw_table_top(ax, table)
         draw_pockets(ax, table)
