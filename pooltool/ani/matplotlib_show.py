@@ -43,6 +43,8 @@ class MatPlotLibShow:
         self.init_plot(ax, shot_or_shots.table)
         self.draw_table(ax, shot_or_shots.table)
 
+        self.draw_ball(ax, shot_or_shots.balls["cue"])
+
         plt.show()
 
     def init_dimensions(self, table):
@@ -220,3 +222,26 @@ class MatPlotLibShow:
         draw_cushions(ax, table)
         draw_table_top(ax, table)
         draw_pockets(ax, table)
+
+    def draw_ball(self, ax, ball, time=0):
+        """Draws a ball on the table.
+
+        The ball is drawn as a circle with a path indicating its trajectory.
+        """
+
+        assert time >= 0, "Time must be non-negative."
+
+        # Draw the ball
+        for state in ball.history.states:
+            if state.t > time:
+                break
+
+            x, y = state.rvw[0, 1], state.rvw[0, 0]
+
+        ball_patch = patches.Circle(
+            (x, y),
+            ball.params.R,
+            facecolor="white",
+            edgecolor="black",
+        )
+        ax.add_patch(ball_patch)
