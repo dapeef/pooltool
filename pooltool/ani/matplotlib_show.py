@@ -26,11 +26,6 @@ class MatPlotLibShow:
             "green",  # pocketed = 4
         ]
 
-        # Define cushion polarity
-        # 0 draws a cushion to the right of the defining line, 1 to the left
-        # Clockwise, starting with the left-most side of the top-left pocket sides
-        self.cushion_polarity = [0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0]
-
     def show(
         self,
         shot_or_shots: Union[System, MultiSystem],
@@ -102,7 +97,12 @@ class MatPlotLibShow:
 
                 # Adjust the angle using the cushion polarity (assumed to be a list
                 # where the id (converted to int) indexes into self.cushion_polarity).
-                angle = base_angle + self.cushion_polarity[int(line_info.id) - 1] * 180
+                if 0 < base_angle % 360 <= 180:
+                    polarity = -(line_info.direction - 1)
+                else:
+                    polarity = line_info.direction
+
+                angle = base_angle + polarity * 180
 
                 # Find the midpoint of the cushion
                 mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
