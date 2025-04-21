@@ -5,6 +5,7 @@ import matplotlib.patches as patches
 import matplotlib.transforms as transforms
 from matplotlib import pyplot as plt
 
+from pooltool.objects.table.specs import TableType
 from pooltool.system.datatypes import MultiSystem, System
 
 
@@ -49,13 +50,21 @@ class MatPlotLibShow:
         plt.show()
 
     def init_dimensions(self, table):
-        self.cushion_thickness = 0
-        for line in table.cushion_segments.linear.values():
-            self.cushion_thickness = max(
-                [self.cushion_thickness, -line.p1[0], -line.p2[0]]
-            )
-        if self.cushion_thickness == 0:
-            self.cushion_thickness = 0.03  # 30cm, for tables without pockets
+        match table.table_type:
+            case TableType.BILLIARD:
+                self.cushion_thickness = 0.03  # 30cm, for tables without pockets
+
+            case TableType.POCKET | TableType.SNOOKER:
+                self.cushion_thickness = 0
+                for line in table.cushion_segments.linear.values():
+                    self.cushion_thickness = max(
+                        [self.cushion_thickness, -line.p1[0], -line.p2[0]]
+                    )
+
+            case _:
+                raise ValueError(
+                    f"Unsupported table type: {table.table_type}. Supported types are: BILLIARD, POCKET, SNOOKER."
+                )
 
         self.padding = self.top_thickness + self.cushion_thickness
 
