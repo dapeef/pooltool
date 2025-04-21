@@ -42,12 +42,12 @@ class MatPlotLibShow:
         fig, ax = plt.subplots()
 
         self.init_dimensions(shot_or_shots.table)
-        self.init_plot(ax, shot_or_shots.table)
         self.draw_table(ax, shot_or_shots.table)
 
         continuize(shot_or_shots, 0.001, inplace=True)
         self.draw_ball_paths(ax, shot_or_shots)
         self.draw_balls(ax, shot_or_shots.balls)
+        self.init_plot(ax, shot_or_shots.table)
 
         plt.show()
 
@@ -74,6 +74,7 @@ class MatPlotLibShow:
         self.view_max = [table.l + self.padding, table.w + self.padding]
 
     def init_plot(self, ax, table):
+        # TODO: rename this
         ax.set_axis_off()
         ax.set_xlim(self.view_min[0], self.view_max[0])
         ax.set_ylim(self.view_min[1], self.view_max[1])
@@ -284,7 +285,38 @@ class MatPlotLibShow:
     def draw_ball(self, ax, ball, time=0):
         """Draws a ball on the table."""
 
+        def draw_image_circle(ax, image_path, center, radius, zorder):
+            image = plt.imread(image_path)
+
+            height, width, _ = image.shape
+            if height > width:
+                scale = 2 * radius / width
+            else:
+                scale = 2 * radius / height
+
+            image_extent = (
+                center[0] - width * scale / 2,
+                center[0] + width * scale / 2,
+                center[1] - height * scale / 2,
+                center[1] + height * scale / 2,
+            )
+            im = ax.imshow(image, extent=image_extent, zorder=zorder)
+
+            patch = patches.Circle(
+                center,
+                radius=radius,
+                transform=ax.transData,
+                fill=None,
+                color="black",
+                zorder=zorder + 1,
+            )
+
+            im.set_clip_path(patch)
+            ax.add_patch(patch)
+
         assert time >= 0, "Time must be non-negative."
+
+        x, y = 0, 0
 
         # Draw the ball
         for state in ball.history_cts.states:
@@ -293,11 +325,12 @@ class MatPlotLibShow:
 
             x, y = state.rvw[0, 1], state.rvw[0, 0]
 
-        ball_patch = patches.Circle(
+        draw_image_circle(
+            ax,
+            # TODO: point this at the correct file
+            # TODO: use a projected version of the ball
+            "/Users/alistair/Documents/GitHub/pooltool/pooltool/models/balls/pooltool_pocket/9.png",
             (x, y),
             ball.params.R,
-            facecolor="white",
-            edgecolor="black",
             zorder=10,
         )
-        ax.add_patch(ball_patch)
